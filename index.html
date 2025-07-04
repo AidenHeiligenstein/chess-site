@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aiden's Chess vs Bot</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stockfish@11.0.0/dist/stockfish.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard-1.0.0.min.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    #board {
+      width: 360px;
+    }
+
+    #status, #fen, #pgn, #history, #timer {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    #controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #444;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>♟ Aiden vs Stockfish</h1>
+  <div id="board"></div>
+  <div id="status"></div>
+  <div id="fen"></div>
+  <div id="pgn"></div>
+  <div id="timer"></div>
+  <div id="history"></div>
+
+  <div id="controls">
+    <button onclick="startGame('easy')">Easy</button>
+    <button onclick="startGame('medium')">Medium</button>
+    <button onclick="startGame('hard')">Hard</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+
+  <script>
+    let board = null;
+    let game = new Chess();
+    let engine = STOCKFISH();
+    let timerStart = null;
+    let historyLog = [];
+
+    function updateStatus() {
+      let status = '';
+      const moveColor = game.turn() === 'w' ? 'White' : 'Black';
+
+      if (game.in_checkmate()) {
+        status = 'Game over, ' + moveColor + ' is in checkmate.';
+      } else if (game.in_draw()) {
+        status = 'Game over, drawn position';
+      } else {
+        status = moveColor + ' to move';
+        if (game.in_check()) status += ', ' + moveColor + ' is in check';
+      }
+
+      document.getElementById('status').textContent = status;
+      document.getElementById('fen').textContent = 'FEN: ' + game.fen();
+      document.getElementById('pgn').textContent = 'PGN: ' + game.pgn();
+      document.getElementById('history').textContent = 'Moves: ' + historyLog.join(', ');
+    }
+
+    function makeEngineMove() {
+      engine.postMessage('position fen ' + game.fen());
+      engine.postMessage('go depth ' + engineSkill);
+    }
+
+    let engineSkill = 5;
+    engine.onmessage = function (e) {
+      if (e && typeof e === 'object') e = e.data;
+      if (e.startsWith('bestmove')) {
+        const move = e.split(' ')[1];
+        if (move) {
+          game.move({ from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' });
+          historyLog.push(move);
+          board.position(game.fen());
+          updateStatus();
+        }
+      }
+    };
+
+    function onDragStart(source, piece) {
+      if (game.game_over() || piece.search(/^b/) !== -1) return false;
+    }
+
+    function onDrop(source, target) {
+      const move = game.move({ from: source, to: target, promotion: 'q' });
+      if (move === null) return 'snapback';
+      historyLog.push(source + target);
+      updateStatus();
+      setTimeout(makeEngineMove, 250);
+    }
+
+    function onSnapEnd() {
+      board.position(game.fen());
+    }
+
+    function resetGame() {
+      game.reset();
+      historyLog = [];
+      board.position('start');
+      updateStatus();
+    }
+
+    function startGame(difficulty) {
+      engineSkill = difficulty === 'easy' ? 2 : difficulty === 'medium' ? 5 : 10;
+      resetGame();
+      timerStart = Date.now();
+      document.getElementById('timer').textContent = 'Timer started';
+    }
+
+    board = Chessboard('board', {
+      draggable: true,
+      position: 'start',
+      onDragStart: onDragStart,
+      onDrop: onDrop,
+      onSnapEnd: onSnapEnd
+    });
+
+    updateStatus();
+  </script>
+</body>
+</html>
