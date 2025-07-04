@@ -15,7 +15,7 @@ Welcome to a realm where logic meets legend. **Aiden's Chess Arena** is a browse
 
 ### 🚀 Live Demo
 
-> [▶️ Play Now](https://aidenheiligenstein.github.io/your-repo-name/)
+> [▶️ Play Now](https://aidenheiligenstein.github.io/chess-site/)
 
 Open in browser, challenge the bot, and relive your inner Magnus Carlsen.
 
