@@ -17,27 +17,24 @@
       align-items: center;
       padding: 20px;
     }
-
     h1 {
       margin-bottom: 20px;
     }
-
     #board {
       width: 360px;
     }
-
     #status, #fen, #pgn, #history {
       margin-top: 10px;
       font-size: 14px;
       color: #ccc;
+      max-width: 800px;
+      word-wrap: break-word;
     }
-
     #controls {
       margin-top: 20px;
       display: flex;
       gap: 10px;
     }
-
     button {
       padding: 8px 16px;
       border: none;
@@ -46,7 +43,6 @@
       border-radius: 4px;
       cursor: pointer;
     }
-
     button:hover {
       background: #666;
     }
@@ -59,88 +55,124 @@
   <div id="fen"></div>
   <div id="pgn"></div>
   <div id="history"></div>
-
   <div id="controls">
     <button onclick="startGame()">Start Game</button>
     <button onclick="resetGame()">Reset</button>
   </div>
 
   <script>
-    window.onload = function () {
-      let board = null;
-      let game = new Chess();
-      let historyLog = [];
+    let board = null;
+    let game = new Chess();
+    let historyLog = [];
+    let playerColor = 'white';
+    let gameActive = true;
 
-      function updateStatus() {
-        let status = '';
-        const moveColor = game.turn() === 'w' ? 'White' : 'Black';
-
-        if (game.in_checkmate()) {
-          status = 'Game over, ' + moveColor + ' is in checkmate.';
-        } else if (game.in_draw()) {
-          status = 'Game over, drawn position';
-        } else {
-          status = moveColor + ' to move';
-          if (game.in_check()) status += ', ' + moveColor + ' is in check';
+    function updateStatus() {
+      let status = '';
+      const moveColor = game.turn() === 'w' ? 'White' : 'Black';
+      
+      if (game.in_checkmate()) {
+        status = 'Game over, ' + moveColor + ' is in checkmate.';
+        gameActive = false;
+      } else if (game.in_draw()) {
+        status = 'Game over, drawn position';
+        gameActive = false;
+      } else {
+        status = moveColor + ' to move';
+        if (game.in_check()) {
+          status += ', ' + moveColor + ' is in check';
         }
-
-        document.getElementById('status').textContent = status;
-        document.getElementById('fen').textContent = 'FEN: ' + game.fen();
-        document.getElementById('pgn').textContent = 'PGN: ' + game.pgn();
-        document.getElementById('history').textContent = 'Moves: ' + historyLog.join(', ');
       }
+      
+      document.getElementById('status').textContent = status;
+      document.getElementById('fen').textContent = 'FEN: ' + game.fen();
+      document.getElementById('pgn').textContent = 'PGN: ' + game.pgn();
+      document.getElementById('history').textContent = 'Moves: ' + historyLog.join(', ');
+    }
 
-      function makeBotMove() {
-        const moves = game.moves();
-        if (moves.length > 0) {
-          const move = moves[Math.floor(Math.random() * moves.length)];
-          game.move(move);
-          historyLog.push(move);
+    function makeBotMove() {
+      if (!gameActive || game.game_over()) return;
+      
+      const moves = game.moves();
+      if (moves.length > 0) {
+        const move = moves[Math.floor(Math.random() * moves.length)];
+        const moveObj = game.move(move);
+        if (moveObj) {
+          historyLog.push(moveObj.san);
           board.position(game.fen());
           updateStatus();
         }
       }
+    }
 
-      function onDragStart(source, piece) {
-        if (game.game_over() || piece.search(/^b/) !== -1) return false;
+    function onDragStart(source, piece, position, orientation) {
+      // Do not pick up pieces if the game is over
+      if (game.game_over()) return false;
+
+      // Only pick up pieces for the side to move
+      if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+          (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+        return false;
       }
 
-      function onDrop(source, target) {
-        const move = game.move({ from: source, to: target, promotion: 'q' });
-        if (move === null) return 'snapback';
-        historyLog.push(source + target);
-        updateStatus();
-        setTimeout(makeBotMove, 500);
+      // Only allow player to move white pieces
+      if (piece.search(/^b/) !== -1) {
+        return false;
       }
+    }
 
-      function onSnapEnd() {
-        board.position(game.fen());
-      }
-
-      function resetGame() {
-        game.reset();
-        historyLog = [];
-        board.position('start');
-        updateStatus();
-      }
-
-      function startGame() {
-        resetGame();
-      }
-
-      board = Chessboard('board', {
-        draggable: true,
-        position: 'start',
-        onDragStart: onDragStart,
-        onDrop: onDrop,
-        onSnapEnd: onSnapEnd
+    function onDrop(source, target) {
+      // See if the move is legal
+      const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // Always promote to a queen for simplicity
       });
 
+      // Illegal move
+      if (move === null) return 'snapback';
+
+      // Add move to history
+      historyLog.push(move.san);
       updateStatus();
 
-      window.resetGame = resetGame;
-      window.startGame = startGame;
+      // Make bot move after a short delay
+      if (gameActive && !game.game_over()) {
+        setTimeout(makeBotMove, 500);
+      }
     }
+
+    function onSnapEnd() {
+      board.position(game.fen());
+    }
+
+    function resetGame() {
+      game.reset();
+      historyLog = [];
+      gameActive = true;
+      board.position('start');
+      updateStatus();
+    }
+
+    function startGame() {
+      resetGame();
+    }
+
+    // Initialize the board
+    const config = {
+      draggable: true,
+      position: 'start',
+      onDragStart: onDragStart,
+      onDrop: onDrop,
+      onSnapEnd: onSnapEnd
+    };
+
+    board = Chessboard('board', config);
+    updateStatus();
+
+    // Make functions globally accessible
+    window.resetGame = resetGame;
+    window.startGame = startGame;
   </script>
 </body>
 </html>
