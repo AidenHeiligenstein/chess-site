@@ -66,76 +66,81 @@
   </div>
 
   <script>
-    let board = null;
-    let game = new Chess();
-    let historyLog = [];
+    window.onload = function () {
+      let board = null;
+      let game = new Chess();
+      let historyLog = [];
 
-    function updateStatus() {
-      let status = '';
-      const moveColor = game.turn() === 'w' ? 'White' : 'Black';
+      function updateStatus() {
+        let status = '';
+        const moveColor = game.turn() === 'w' ? 'White' : 'Black';
 
-      if (game.in_checkmate()) {
-        status = 'Game over, ' + moveColor + ' is in checkmate.';
-      } else if (game.in_draw()) {
-        status = 'Game over, drawn position';
-      } else {
-        status = moveColor + ' to move';
-        if (game.in_check()) status += ', ' + moveColor + ' is in check';
+        if (game.in_checkmate()) {
+          status = 'Game over, ' + moveColor + ' is in checkmate.';
+        } else if (game.in_draw()) {
+          status = 'Game over, drawn position';
+        } else {
+          status = moveColor + ' to move';
+          if (game.in_check()) status += ', ' + moveColor + ' is in check';
+        }
+
+        document.getElementById('status').textContent = status;
+        document.getElementById('fen').textContent = 'FEN: ' + game.fen();
+        document.getElementById('pgn').textContent = 'PGN: ' + game.pgn();
+        document.getElementById('history').textContent = 'Moves: ' + historyLog.join(', ');
       }
 
-      document.getElementById('status').textContent = status;
-      document.getElementById('fen').textContent = 'FEN: ' + game.fen();
-      document.getElementById('pgn').textContent = 'PGN: ' + game.pgn();
-      document.getElementById('history').textContent = 'Moves: ' + historyLog.join(', ');
-    }
+      function makeBotMove() {
+        const moves = game.moves();
+        if (moves.length > 0) {
+          const move = moves[Math.floor(Math.random() * moves.length)];
+          game.move(move);
+          historyLog.push(move);
+          board.position(game.fen());
+          updateStatus();
+        }
+      }
 
-    function makeBotMove() {
-      const moves = game.moves();
-      if (moves.length > 0) {
-        const move = moves[Math.floor(Math.random() * moves.length)];
-        game.move(move);
-        historyLog.push(move);
+      function onDragStart(source, piece) {
+        if (game.game_over() || piece.search(/^b/) !== -1) return false;
+      }
+
+      function onDrop(source, target) {
+        const move = game.move({ from: source, to: target, promotion: 'q' });
+        if (move === null) return 'snapback';
+        historyLog.push(source + target);
+        updateStatus();
+        setTimeout(makeBotMove, 500);
+      }
+
+      function onSnapEnd() {
         board.position(game.fen());
+      }
+
+      function resetGame() {
+        game.reset();
+        historyLog = [];
+        board.position('start');
         updateStatus();
       }
-    }
 
-    function onDragStart(source, piece) {
-      if (game.game_over() || piece.search(/^b/) !== -1) return false;
-    }
+      function startGame() {
+        resetGame();
+      }
 
-    function onDrop(source, target) {
-      const move = game.move({ from: source, to: target, promotion: 'q' });
-      if (move === null) return 'snapback';
-      historyLog.push(source + target);
+      board = Chessboard('board', {
+        draggable: true,
+        position: 'start',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd
+      });
+
       updateStatus();
-      setTimeout(makeBotMove, 500);
+
+      window.resetGame = resetGame;
+      window.startGame = startGame;
     }
-
-    function onSnapEnd() {
-      board.position(game.fen());
-    }
-
-    function resetGame() {
-      game.reset();
-      historyLog = [];
-      board.position('start');
-      updateStatus();
-    }
-
-    function startGame() {
-      resetGame();
-    }
-
-    board = Chessboard('board', {
-      draggable: true,
-      position: 'start',
-      onDragStart: onDragStart,
-      onDrop: onDrop,
-      onSnapEnd: onSnapEnd
-    });
-
-    updateStatus();
   </script>
 </body>
 </html>
