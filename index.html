@@ -636,21 +636,31 @@
             capturedByBlack.innerHTML = capturedPieces.black.map(piece => pieces[piece]).join(' ');
         }
 
-        function checkGameState() {
-            let whiteKing = false, blackKing = false;
-            
-            for (let row = 0; row < 8; row++) {
-                for (let col = 0; col < 8; col++) {
-                    if (board[row][col] === 'wK') whiteKing = true;
-                    if (board[row][col] === 'bK') blackKing = true;
-                }
-            }
-
-            if (!whiteKing || !blackKing) {
-                gameOver = true;
-                updateGameStatus();
-            }
+function checkGameState() {
+    let whiteKing = false, blackKing = false;
+    
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            if (board[row][col] === 'wK') whiteKing = true;
+            if (board[row][col] === 'bK') blackKing = true;
         }
+    }
+
+    if (!whiteKing || !blackKing) {
+        gameOver = true;
+        const status = document.getElementById('gameStatus');
+        
+        if (!whiteKing) {
+            status.textContent = `Game Over! AI (Black Cats) wins! 🎉`;
+            status.style.color = '#ff6b6b';
+        } else if (!blackKing) {
+            status.textContent = `Game Over! You (White Cats) win! 🎉`;
+            status.style.color = '#32cd32';
+        }
+
+        return;
+    }
+}
 
         // AI Implementation
         function makeAiMove() {
