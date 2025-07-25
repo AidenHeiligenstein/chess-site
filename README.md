@@ -1,3 +1,3 @@
 # ♟️ PURPLE CHESS
 
-[play](https://aidenheiligenstein.github.io/chess-site)
+          [play](https://aidenheiligenstein.github.io/chess-site)
